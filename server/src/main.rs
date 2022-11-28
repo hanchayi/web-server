@@ -1,4 +1,4 @@
-use std::{net::{TcpListener, TcpStream}, io::{Read, BufReader, BufRead, Write}, fs};
+use std::{net::{TcpListener, TcpStream}, io::{Read, BufReader, BufRead, Write}, fs, time::Duration, thread};
 
 fn main() {
     // 透過 TcpListener，我們可以監聽 127.0.0.1:7878 位址上的 TCP 連線
@@ -15,15 +15,19 @@ fn main() {
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
-    let http_request = buf_reader
+    let request_line = buf_reader
         .lines()
         .next().unwrap().unwrap();
 
-    let (status_line, filename) = if http_request == "GET / HTTP/1.1" {
-        ("HTTP/1.1 200 OK", "hello.html")
-    } else {
-        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    let (status_line, filename) = match &request_line[..] {
+        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html"),
+        "GET /sleep HTTP/1.1" => {
+            thread::sleep(Duration::from_secs(5));
+            ("HTTP/1.1 200 OK", "hello.html")
+        },
+        _ => ("HTTP/1.1 404 NOT FOUND", "404.html")
     };
+    
 
     let contents = fs::read_to_string(filename).unwrap();
     let length = contents.len();
