@@ -1,4 +1,5 @@
 use std::{net::{TcpListener, TcpStream}, io::{Read, BufReader, BufRead, Write}, fs, time::Duration, thread};
+use server::ThreadPool;
 
 fn main() {
     // 透過 TcpListener，我們可以監聽 127.0.0.1:7878 位址上的 TCP 連線
@@ -9,7 +10,11 @@ fn main() {
         // 一個流代表的是客戶端與伺服器之間的開啟的連線
         let stream = stream.unwrap();
         println!("建立连接");
-        handle_connection(stream);
+
+        let pool = ThreadPool::new(4);
+        pool.execute(|| {
+            handle_connection(stream);
+        });
     }
 }
 
