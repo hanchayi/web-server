@@ -7,7 +7,11 @@ pub struct ThreadPool {
     sender: Sender<Job>,
 }
 
-pub struct Job;
+//  an owned pointer to a callable value
+//  (with the original type unknown and dynamically change) 
+// such as closures (with no argument or no return value), 
+// which can be sent across threads and lives as long as the program itself.
+type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct Worker {
     id: usize,
@@ -16,8 +20,10 @@ pub struct Worker {
 
 impl Worker {
     pub fn new (id: usize, receiver: Arc<Mutex<Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(|| {
-            receiver;
+        let thread = thread::spawn(move || loop {
+            let job = receiver.lock().unwrap().recv().unwrap();
+            println!("Worker {id} got a job; excuting");
+            job();
         });
         Worker {
             id,
@@ -50,6 +56,7 @@ impl ThreadPool {
         where 
             F: FnOnce() + Send + 'static,
     {
-
+        let job = Box::new(f);
+        self.sender.send(job).unwrap();
     }
 }
