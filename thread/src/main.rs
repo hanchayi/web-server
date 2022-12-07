@@ -1,4 +1,4 @@
-use std::{thread::{spawn, sleep}, time::Duration, sync::mpsc};
+use std::{thread::{spawn, sleep}, time::Duration, sync::{mpsc, Mutex}};
 
 fn main() {
     let (sender, receiver) = mpsc::channel();
@@ -35,6 +35,13 @@ fn main() {
             sleep(Duration::from_secs(1));
         }
     });
+
+    let m = Mutex::new(5);
+    {
+        let mut num = m.lock().unwrap();
+        *num = 6;
+    }
+    println!("m = {:?}", m);
     
     for msg in receiver {
         // let msg = r.recv().unwrap();
