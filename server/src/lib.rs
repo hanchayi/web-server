@@ -21,6 +21,7 @@ pub struct Worker {
 impl Worker {
     pub fn new (id: usize, receiver: Arc<Mutex<Receiver<Job>>>) -> Worker {
         let thread = thread::spawn(move || loop {
+            // 循环的执行recv
             let job = receiver.lock().unwrap().recv().unwrap();
             println!("Worker {id} got a job; excuting");
             job();
@@ -52,11 +53,16 @@ impl ThreadPool {
         ThreadPool { workers, sender }
     }
 
+    /**
+     * 执行
+     */
     pub fn execute<F>(&self, f: F) 
         where 
             F: FnOnce() + Send + 'static,
     {
+        // 分配一个job
         let job = Box::new(f);
+        // 发送job
         self.sender.send(job).unwrap();
     }
 }

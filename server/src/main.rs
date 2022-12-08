@@ -4,6 +4,7 @@ use server::ThreadPool;
 fn main() {
     // 透過 TcpListener，我們可以監聽 127.0.0.1:7878 位址上的 TCP 連線
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    // 创建一个长度为4的线程池
     let pool = ThreadPool::new(4);
 
     // TcpListener 的 incoming 方法會回傳一個疊代器，給予我們一連串的流
