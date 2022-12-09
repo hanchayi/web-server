@@ -4,4 +4,5 @@ members = [
    "server",
    "thread",
    "mutex",
+   "lifetime",
 ]
