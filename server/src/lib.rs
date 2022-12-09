@@ -4,7 +4,7 @@ use std::sync::mpsc::{ Receiver, Sender};
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: Sender<Job>,
+    sender: Option<Sender<Job>>,
 }
 
 //  an owned pointer to a callable value
@@ -15,20 +15,29 @@ type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
     pub fn new (id: usize, receiver: Arc<Mutex<Receiver<Job>>>) -> Worker {
         let thread = thread::spawn(move || loop {
             // 循环的执行recv
-            let job = receiver.lock().unwrap().recv().unwrap();
-            println!("Worker {id} got a job; excuting");
-            job();
+            let message = receiver.lock().unwrap().recv();
+
+            match message {
+                Ok(job) => {
+                    println!("Worker {id} got a job; excuting");
+                    job();
+                },
+                Err(_) => {
+                    println!("Worker {id} shut down");
+                    break;
+                },
+            }
         });
         Worker {
             id,
-            thread,
+            thread: Some(thread),
         }
     }
 }
@@ -50,7 +59,7 @@ impl ThreadPool {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        ThreadPool { workers, sender }
+        ThreadPool { workers, sender: Some(sender) }
     }
 
     /**
@@ -63,6 +72,20 @@ impl ThreadPool {
         // 分配一个job
         let job = Box::new(f);
         // 发送job
-        self.sender.send(job).unwrap();
+        self.sender.as_ref().unwrap().send(job).unwrap();
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        drop(self.sender.take());
+
+        for worker in &mut self.workers {
+            println!("Shutting down workder {}", worker.id);
+
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+        }
     }
 }

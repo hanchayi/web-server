@@ -8,7 +8,7 @@ fn main() {
     let pool = ThreadPool::new(4);
 
     // TcpListener 的 incoming 方法會回傳一個疊代器，給予我們一連串的流
-    for stream in listener.incoming() {
+    for stream in listener.incoming().take(2) {
         // 一個流代表的是客戶端與伺服器之間的開啟的連線
         let stream = stream.unwrap();
         println!("建立连接");
@@ -17,6 +17,8 @@ fn main() {
             handle_connection(stream);
         });
     }
+
+    println!("two request")
 }
 
 fn handle_connection(mut stream: TcpStream) {
@@ -40,5 +42,6 @@ fn handle_connection(mut stream: TcpStream) {
     let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
     
     stream.write_all(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
 
 }
